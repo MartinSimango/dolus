@@ -1,0 +1,52 @@
+Expectation:
+    Priority: 1
+    Path: "v1/path"
+    Operation: GET
+    Request: 
+        Any: true  
+        Body:  # if body is there Any is automatically set to false
+        {
+            "status": "CURRENT",  
+            "updated": "2011-01-21T11:33:21Z", 
+            "id": "v2.0"
+        }
+        Matcher:
+            Fields: ["all"]
+            Headers: ["all"]
+    
+    Response: # exam 
+        Status: 200
+        DefaultValuesGenerated: true # If schema is there generate values based on types
+        GeneratedAllFields: true # if there is no body example is assumed and example values are replaced
+        Body:                    # Default
+          {
+            "status": "CURRENT",  # DOLUS_GEN_STRING(2,10,REGEX)  // fields will overwrite generated
+            "updated": "2011-01-21T11:33:21Z",  # DOLUS_GEN_UUID 
+            "id": "v2.0"
+        }
+        Headers: []
+
+
+ExpectationConfig:
+    Path: "/v1"
+    Operation: GET
+    Mode:
+        Type: FIXED 
+        Value: [200,400,429]
+
+Path: "/v1"
+  Mode:
+    Fixed: 200
+
+Path: "/v1"
+  Mode:
+    Random: 
+
+Path: "/v1"
+  Mode:
+    Custom: [200,2,429,1,500,1] 
+
+
+
+  
+  

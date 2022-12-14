@@ -3,7 +3,10 @@ package dolus
 import (
 	"context"
 	"fmt"
+	"net/http"
 
+	"github.com/MartinSimango/dolus/pkg/example"
+	"github.com/MartinSimango/dolus/pkg/schema"
 	"github.com/fatih/color"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/labstack/echo/v4"
@@ -29,66 +32,83 @@ Go framework for creating customizable and extendable mock servers
 func printBanner() {
 	versionColor := color.New(color.FgGreen).SprintFunc()("v", Version)
 	websiteColor := color.New(color.FgBlue).SprintFunc()(website)
-
 	fmt.Printf(banner, versionColor, websiteColor)
 }
 
 type Dolus struct {
-	OpenAPIspec string
-	HideBanner  bool
-	HidePort    bool
-	echoServer  *echo.Echo
+	OpenAPIspec        string
+	HideBanner         bool
+	HidePort           bool
+	EchoServer         *echo.Echo
+	ResponseRepository *ResponseRepository
 }
+
+type OperationResponse struct {
+	Operation string
+	Response  http.Response
+}
+
+type Paths map[string][]OperationResponse
 
 func New() *Dolus {
 	return &Dolus{
-		HideBanner: false,
-		HidePort:   false,
+		HideBanner:         false,
+		HidePort:           false,
+		OpenAPIspec:        "openapi.yaml",
+		ResponseRepository: NewResponseRepository(),
 	}
 }
 
 func (d *Dolus) initHttpServer() {
-	d.echoServer = echo.New()
-	d.echoServer.HideBanner = true
-	d.echoServer.HidePort = d.HidePort
+	d.EchoServer = echo.New()
+	d.EchoServer.HideBanner = true
+	d.EchoServer.HidePort = d.HidePort
 }
 
-func (d *Dolus) startHttpServer(port int) {
+func (d *Dolus) startHttpServer(address string) error {
 	d.initHttpServer()
 
 	ctx := context.Background()
 	loader := &openapi3.Loader{Context: ctx, IsExternalRefsAllowed: true}
-	doc, err := loader.LoadFromFile("openapi.yaml")
+	doc, err := loader.LoadFromFile(d.OpenAPIspec)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
-	// Validate document
-	_ = doc.Validate(ctx)
+
+	if err := doc.Validate(ctx); err != nil {
+		return err
+	}
+
+	// for path find operations
+	// for each operations get the response if no response throw error for path and operations
+	// look at schema and build struct from that schema (will be recursive)
+	// if no schema look for examples values if no examples throw error as can't produce response
 
 	for path := range doc.Paths {
-		for operation, v := range doc.Paths[path].Operations() {
-			a, err := v.Responses.Get(200).Value.MarshalJSON()
-			if err == nil {
-				fmt.Println(string(a))
-			}
+		for method, operation := range doc.Paths[path].Operations() {
+			p := path
+			m := method
+			for code, ref := range operation.Responses {
+				s := schema.New(path, method, code, ref, "application/json")
+				d.ResponseRepository.Add(p, m, code, example.New(s))
 
-			d.echoServer.Router().Add(operation, path, func(ctx echo.Context) error {
-				return ctx.JSON(200, v.Responses.Get(200).Value)
+			}
+			d.EchoServer.Router().Add(m, p, func(ctx echo.Context) error {
+				// c, _ := strconv.Atoi(code)
+				return d.ResponseRepository.GetEchoResponse(p, m, ctx)
 			})
 		}
 
 	}
 
-	d.echoServer.Start(fmt.Sprintf(":%d", port))
+	return d.EchoServer.Start(address)
 }
 
-func (d *Dolus) Start() {
+func (d *Dolus) Start(address string) error {
 	if !d.HideBanner {
 		printBanner()
 	}
-	d.startHttpServer(1080)
-
+	return d.startHttpServer(address)
 }
 
 func (d *Dolus) AddExpectation() {
