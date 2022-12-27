@@ -30,6 +30,12 @@ func NewResponseRepository() *ResponseRepository {
 	}
 }
 
+type GenerateError struct {
+	Path     string
+	Method   string
+	ErrorMsg string
+}
+
 func (repo *ResponseRepository) GetEchoResponse(path, method string, ctx echo.Context) error {
 	// need to look at request path, method
 	// look at path and method - see if any expectations are there for
@@ -41,17 +47,22 @@ func (repo *ResponseRepository) GetEchoResponse(path, method string, ctx echo.Co
 	for _, expectation := range repo.Expectations[PathMethod{Path: path, Method: method}] {
 
 		if expectation.StatusCode == "200" {
-			expectation.Example.GenerateFields()
-
-			return ctx.JSON(200, expectation.Example.Value.Schema)
+			return ctx.JSON(200, expectation.Example.Get())
 
 		}
 	}
-	return ctx.JSON(500, "No expectation found")
+	return ctx.JSON(500, GenerateError{
+		Path:     path,
+		Method:   method,
+		ErrorMsg: "No expectation found for path and HTTP method.",
+	})
 
 }
 
 func (repo *ResponseRepository) Add(path, method, code string, example *example.Example) {
+	if example == nil {
+		return
+	}
 	pathMethod := PathMethod{
 		Path:   path,
 		Method: method,

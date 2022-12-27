@@ -6,8 +6,6 @@ import (
 	"github.com/takahiromiyamoto/go-xeger"
 )
 
-type GenerationFunctionKind uint8
-
 var (
 	generateStringFromRegex GenerationFunc = GenerationFunc{
 		Func: func(parameters ...any) any {

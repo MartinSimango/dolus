@@ -5,9 +5,8 @@ type GenerationFunction interface {
 }
 
 type GenerationFunc struct {
-	FunctionKind GenerationFunctionKind
-	Func         func(...any) any
-	Args         []any
+	Func func(...any) any
+	Args []any
 }
 
 var _ GenerationFunction = &GenerationFunc{}

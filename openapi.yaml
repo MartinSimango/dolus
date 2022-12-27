@@ -36,7 +36,8 @@ paths:
                             "links": [
                                 {
                                     "href": "http://127.0.0.1:8774/v3/",
-                                    "rel": "self"
+                                    "rel": "Cool", #[ ["ag","Fg",],["ag","af","Fg"]],
+                                    "cool": true
                                 }
                             ]
                         }

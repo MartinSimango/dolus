@@ -8,8 +8,9 @@ import (
 
 func main() {
 	d := dolus.New()
-	d.OpenAPIspec = "openapi2.yaml"
+	// d.OpenAPIspec = "openapi2.yaml"
 	if err := d.Start(fmt.Sprintf(":%d", 1080)); err != nil {
 		fmt.Println(err)
 	}
+
 }

@@ -89,12 +89,15 @@ func (d *Dolus) startHttpServer(address string) error {
 			p := path
 			m := method
 			for code, ref := range operation.Responses {
-				s := schema.New(path, method, code, ref, "application/json")
-				d.ResponseRepository.Add(p, m, code, example.New(s))
+				if path != "/" || code != "200" {
+					continue
+				}
+				s := schema.New(path, method, code, ref, "application/json", "Dolus_")
+				return nil
 
+				d.ResponseRepository.Add(p, m, code, example.New(s, example.GenerateAll))
 			}
 			d.EchoServer.Router().Add(m, p, func(ctx echo.Context) error {
-				// c, _ := strconv.Atoi(code)
 				return d.ResponseRepository.GetEchoResponse(p, m, ctx)
 			})
 		}
