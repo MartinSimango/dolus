@@ -79,23 +79,15 @@ func (d *Dolus) startHttpServer(address string) error {
 		return err
 	}
 
-	// for path find operations
-	// for each operations get the response if no response throw error for path and operations
-	// look at schema and build struct from that schema (will be recursive)
-	// if no schema look for examples values if no examples throw error as can't produce response
-
 	for path := range doc.Paths {
 		for method, operation := range doc.Paths[path].Operations() {
 			p := path
 			m := method
 			for code, ref := range operation.Responses {
-				if path != "/" || code != "200" {
-					continue
-				}
-				s := schema.New(path, method, code, ref, "application/json", "Dolus_")
-				return nil
 
-				d.ResponseRepository.Add(p, m, code, example.New(s, example.GenerateAll))
+				fmt.Println(path, code)
+				s := schema.New(path, method, code, ref, "application/json")
+				d.ResponseRepository.Add(p, m, code, example.New(s, example.Generate))
 			}
 			d.EchoServer.Router().Add(m, p, func(ctx echo.Context) error {
 				return d.ResponseRepository.GetEchoResponse(p, m, ctx)

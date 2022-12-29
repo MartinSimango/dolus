@@ -1,0 +1,22 @@
+"filename", "language", "Go", "YAML", "Go Checksum File", "Markdown", "Go Module File", "Makefile", "comment", "blank", "total"
+"/Users/martinsimango/projects/dolus/Makefile", "Makefile", 0, 0, 0, 0, 0, 18, 1, 12, 31
+"/Users/martinsimango/projects/dolus/README.md", "Markdown", 0, 0, 0, 1, 0, 0, 0, 0, 1
+"/Users/martinsimango/projects/dolus/cmd/dolus/main.go", "Go", 11, 0, 0, 0, 0, 0, 1, 5, 17
+"/Users/martinsimango/projects/dolus/go.mod", "Go Module File", 0, 0, 0, 0, 26, 0, 0, 3, 29
+"/Users/martinsimango/projects/dolus/go.sum", "Go Checksum File", 0, 0, 74, 0, 0, 0, 0, 1, 75
+"/Users/martinsimango/projects/dolus/openapi.yaml", "YAML", 0, 147, 0, 0, 0, 0, 0, 0, 147
+"/Users/martinsimango/projects/dolus/pkg/dolus/dolus.go", "Go", 93, 0, 0, 0, 0, 0, 4, 22, 119
+"/Users/martinsimango/projects/dolus/pkg/dolus/expectation.go", "Go", 10, 0, 0, 0, 0, 0, 13, 9, 32
+"/Users/martinsimango/projects/dolus/pkg/dolus/response.repository.go", "Go", 55, 0, 0, 0, 0, 0, 9, 19, 83
+"/Users/martinsimango/projects/dolus/pkg/dstruct/dstruct.go", "Go", 105, 0, 0, 0, 0, 0, 7, 22, 134
+"/Users/martinsimango/projects/dolus/pkg/dstruct/merger.go", "Go", 106, 0, 0, 0, 0, 0, 2, 21, 129
+"/Users/martinsimango/projects/dolus/pkg/dstruct/reflect.helper.go", "Go", 14, 0, 0, 0, 0, 0, 0, 6, 20
+"/Users/martinsimango/projects/dolus/pkg/example/example.go", "Go", 74, 0, 0, 0, 0, 0, 3, 17, 94
+"/Users/martinsimango/projects/dolus/pkg/generator/functions.go", "Go", 56, 0, 0, 0, 0, 0, 0, 11, 67
+"/Users/martinsimango/projects/dolus/pkg/generator/generator.go", "Go", 12, 0, 0, 0, 0, 0, 0, 5, 17
+"/Users/martinsimango/projects/dolus/pkg/http/server.go", "Go", 1, 0, 0, 0, 0, 0, 0, 1, 2
+"/Users/martinsimango/projects/dolus/pkg/schema/schema.go", "Go", 196, 0, 0, 0, 0, 0, 11, 30, 237
+"/Users/martinsimango/projects/dolus/pkg/wire/run.go", "Go", 1, 0, 0, 0, 0, 0, 0, 1, 2
+"/Users/martinsimango/projects/dolus/pkg/wire/wire.go", "Go", 1, 0, 0, 0, 0, 0, 0, 1, 2
+"/Users/martinsimango/projects/dolus/test.yaml", "YAML", 0, 41, 0, 0, 0, 0, 0, 11, 52
+"Total", "-", 735, 188, 74, 1, 26, 18, 51, 197, 1290

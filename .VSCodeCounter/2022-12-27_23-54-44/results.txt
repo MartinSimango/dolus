@@ -1,0 +1,59 @@
+Date : 2022-12-27 23:54:44
+Directory : /Users/martinsimango/projects/dolus
+Total : 20 files,  1042 codes, 51 comments, 197 blanks, all 1290 lines
+
+Languages
++------------------+------------+------------+------------+------------+------------+
+| language         | files      | code       | comment    | blank      | total      |
++------------------+------------+------------+------------+------------+------------+
+| Go               |         14 |        735 |         50 |        170 |        955 |
+| YAML             |          2 |        188 |          0 |         11 |        199 |
+| Go Checksum File |          1 |         74 |          0 |          1 |         75 |
+| Go Module File   |          1 |         26 |          0 |          3 |         29 |
+| Makefile         |          1 |         18 |          1 |         12 |         31 |
+| Markdown         |          1 |          1 |          0 |          0 |          1 |
++------------------+------------+------------+------------+------------+------------+
+
+Directories
++----------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                 | files      | code       | comment    | blank      | total      |
++----------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                    |         20 |      1,042 |         51 |        197 |      1,290 |
+| cmd                                                                  |          1 |         11 |          1 |          5 |         17 |
+| cmd/dolus                                                            |          1 |         11 |          1 |          5 |         17 |
+| pkg                                                                  |         13 |        724 |         49 |        165 |        938 |
+| pkg/dolus                                                            |          3 |        158 |         26 |         50 |        234 |
+| pkg/dstruct                                                          |          3 |        225 |          9 |         49 |        283 |
+| pkg/example                                                          |          1 |         74 |          3 |         17 |         94 |
+| pkg/generator                                                        |          2 |         68 |          0 |         16 |         84 |
+| pkg/http                                                             |          1 |          1 |          0 |          1 |          2 |
+| pkg/schema                                                           |          1 |        196 |         11 |         30 |        237 |
+| pkg/wire                                                             |          2 |          2 |          0 |          2 |          4 |
++----------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++----------------------------------------------------------------------+------------------+------------+------------+------------+------------+
+| filename                                                             | language         | code       | comment    | blank      | total      |
++----------------------------------------------------------------------+------------------+------------+------------+------------+------------+
+| /Users/martinsimango/projects/dolus/Makefile                         | Makefile         |         18 |          1 |         12 |         31 |
+| /Users/martinsimango/projects/dolus/README.md                        | Markdown         |          1 |          0 |          0 |          1 |
+| /Users/martinsimango/projects/dolus/cmd/dolus/main.go                | Go               |         11 |          1 |          5 |         17 |
+| /Users/martinsimango/projects/dolus/go.mod                           | Go Module File   |         26 |          0 |          3 |         29 |
+| /Users/martinsimango/projects/dolus/go.sum                           | Go Checksum File |         74 |          0 |          1 |         75 |
+| /Users/martinsimango/projects/dolus/openapi.yaml                     | YAML             |        147 |          0 |          0 |        147 |
+| /Users/martinsimango/projects/dolus/pkg/dolus/dolus.go               | Go               |         93 |          4 |         22 |        119 |
+| /Users/martinsimango/projects/dolus/pkg/dolus/expectation.go         | Go               |         10 |         13 |          9 |         32 |
+| /Users/martinsimango/projects/dolus/pkg/dolus/response.repository.go | Go               |         55 |          9 |         19 |         83 |
+| /Users/martinsimango/projects/dolus/pkg/dstruct/dstruct.go           | Go               |        105 |          7 |         22 |        134 |
+| /Users/martinsimango/projects/dolus/pkg/dstruct/merger.go            | Go               |        106 |          2 |         21 |        129 |
+| /Users/martinsimango/projects/dolus/pkg/dstruct/reflect.helper.go    | Go               |         14 |          0 |          6 |         20 |
+| /Users/martinsimango/projects/dolus/pkg/example/example.go           | Go               |         74 |          3 |         17 |         94 |
+| /Users/martinsimango/projects/dolus/pkg/generator/functions.go       | Go               |         56 |          0 |         11 |         67 |
+| /Users/martinsimango/projects/dolus/pkg/generator/generator.go       | Go               |         12 |          0 |          5 |         17 |
+| /Users/martinsimango/projects/dolus/pkg/http/server.go               | Go               |          1 |          0 |          1 |          2 |
+| /Users/martinsimango/projects/dolus/pkg/schema/schema.go             | Go               |        196 |         11 |         30 |        237 |
+| /Users/martinsimango/projects/dolus/pkg/wire/run.go                  | Go               |          1 |          0 |          1 |          2 |
+| /Users/martinsimango/projects/dolus/pkg/wire/wire.go                 | Go               |          1 |          0 |          1 |          2 |
+| /Users/martinsimango/projects/dolus/test.yaml                        | YAML             |         41 |          0 |         11 |         52 |
+| Total                                                                |                  |      1,042 |         51 |        197 |      1,290 |
++----------------------------------------------------------------------+------------------+------------+------------+------------+------------+

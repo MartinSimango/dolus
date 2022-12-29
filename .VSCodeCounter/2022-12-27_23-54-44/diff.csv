@@ -1,0 +1,38 @@
+"filename", "language", "Go", "YAML", "Go Checksum File", "Markdown", "Go Module File", "Makefile", "comment", "blank", "total"
+"/Users/martinsimango/dolus/Makefile", "Makefile", 0, 0, 0, 0, 0, -10, -1, -8, -19
+"/Users/martinsimango/dolus/README.md", "Markdown", 0, 0, 0, -1, 0, 0, 0, 0, -1
+"/Users/martinsimango/dolus/cmd/dolus/main.go", "Go", -12, 0, 0, 0, 0, 0, 0, -4, -16
+"/Users/martinsimango/dolus/go.mod", "Go Module File", 0, 0, 0, 0, -25, 0, 0, -3, -28
+"/Users/martinsimango/dolus/go.sum", "Go Checksum File", 0, 0, -72, 0, 0, 0, 0, -1, -73
+"/Users/martinsimango/dolus/openapi.yaml", "YAML", 0, -146, 0, 0, 0, 0, 0, 0, -146
+"/Users/martinsimango/dolus/openapi2.yaml", "YAML", 0, -743, 0, 0, 0, 0, 0, 0, -743
+"/Users/martinsimango/dolus/pkg/dolus/dolus.go", "Go", -90, 0, 0, 0, 0, 0, -8, -24, -122
+"/Users/martinsimango/dolus/pkg/dolus/expectation.go", "Go", -10, 0, 0, 0, 0, 0, -13, -9, -32
+"/Users/martinsimango/dolus/pkg/dolus/response.repository.go", "Go", -31, 0, 0, 0, 0, 0, -7, -14, -52
+"/Users/martinsimango/dolus/pkg/example/example.go", "Go", -89, 0, 0, 0, 0, 0, -3, -23, -115
+"/Users/martinsimango/dolus/pkg/http/server.go", "Go", -1, 0, 0, 0, 0, 0, 0, -1, -2
+"/Users/martinsimango/dolus/pkg/schema/shema.go", "Go", -90, 0, 0, 0, 0, 0, 0, -18, -108
+"/Users/martinsimango/dolus/pkg/wire/run.go", "Go", -1, 0, 0, 0, 0, 0, 0, -1, -2
+"/Users/martinsimango/dolus/pkg/wire/wire.go", "Go", -1, 0, 0, 0, 0, 0, 0, -1, -2
+"/Users/martinsimango/dolus/test.yaml", "YAML", 0, -41, 0, 0, 0, 0, 0, -11, -52
+"/Users/martinsimango/projects/dolus/Makefile", "Makefile", 0, 0, 0, 0, 0, 18, 1, 12, 31
+"/Users/martinsimango/projects/dolus/README.md", "Markdown", 0, 0, 0, 1, 0, 0, 0, 0, 1
+"/Users/martinsimango/projects/dolus/cmd/dolus/main.go", "Go", 11, 0, 0, 0, 0, 0, 1, 5, 17
+"/Users/martinsimango/projects/dolus/go.mod", "Go Module File", 0, 0, 0, 0, 26, 0, 0, 3, 29
+"/Users/martinsimango/projects/dolus/go.sum", "Go Checksum File", 0, 0, 74, 0, 0, 0, 0, 1, 75
+"/Users/martinsimango/projects/dolus/openapi.yaml", "YAML", 0, 147, 0, 0, 0, 0, 0, 0, 147
+"/Users/martinsimango/projects/dolus/pkg/dolus/dolus.go", "Go", 93, 0, 0, 0, 0, 0, 4, 22, 119
+"/Users/martinsimango/projects/dolus/pkg/dolus/expectation.go", "Go", 10, 0, 0, 0, 0, 0, 13, 9, 32
+"/Users/martinsimango/projects/dolus/pkg/dolus/response.repository.go", "Go", 55, 0, 0, 0, 0, 0, 9, 19, 83
+"/Users/martinsimango/projects/dolus/pkg/dstruct/dstruct.go", "Go", 105, 0, 0, 0, 0, 0, 7, 22, 134
+"/Users/martinsimango/projects/dolus/pkg/dstruct/merger.go", "Go", 106, 0, 0, 0, 0, 0, 2, 21, 129
+"/Users/martinsimango/projects/dolus/pkg/dstruct/reflect.helper.go", "Go", 14, 0, 0, 0, 0, 0, 0, 6, 20
+"/Users/martinsimango/projects/dolus/pkg/example/example.go", "Go", 74, 0, 0, 0, 0, 0, 3, 17, 94
+"/Users/martinsimango/projects/dolus/pkg/generator/functions.go", "Go", 56, 0, 0, 0, 0, 0, 0, 11, 67
+"/Users/martinsimango/projects/dolus/pkg/generator/generator.go", "Go", 12, 0, 0, 0, 0, 0, 0, 5, 17
+"/Users/martinsimango/projects/dolus/pkg/http/server.go", "Go", 1, 0, 0, 0, 0, 0, 0, 1, 2
+"/Users/martinsimango/projects/dolus/pkg/schema/schema.go", "Go", 196, 0, 0, 0, 0, 0, 11, 30, 237
+"/Users/martinsimango/projects/dolus/pkg/wire/run.go", "Go", 1, 0, 0, 0, 0, 0, 0, 1, 2
+"/Users/martinsimango/projects/dolus/pkg/wire/wire.go", "Go", 1, 0, 0, 0, 0, 0, 0, 1, 2
+"/Users/martinsimango/projects/dolus/test.yaml", "YAML", 0, 41, 0, 0, 0, 0, 0, 11, 52
+"Total", "-", 410, -742, 2, 0, 1, 8, 19, 79, -223

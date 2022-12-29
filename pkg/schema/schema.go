@@ -12,21 +12,19 @@ import (
 )
 
 type ResponseSchema struct {
-	Path        string
-	Method      string
-	StatusCode  string
-	FieldPrefix string
-	schema      any
+	Path       string
+	Method     string
+	StatusCode string
+	schema     any
 }
 
-func New(path, method, statusCode string, ref *openapi3.ResponseRef, mediaType string, fieldPrefix string,
+func New(path, method, statusCode string, ref *openapi3.ResponseRef, mediaType string,
 ) *ResponseSchema {
 	return &ResponseSchema{
-		Path:        path,
-		Method:      method,
-		StatusCode:  statusCode,
-		schema:      getSchema(ref, mediaType, fieldPrefix),
-		FieldPrefix: fieldPrefix,
+		Path:       path,
+		Method:     method,
+		StatusCode: statusCode,
+		schema:     getSchema(ref, mediaType),
 	}
 
 }
@@ -79,15 +77,16 @@ func addField[T any](name string, tags string, nullable bool, builder *dynamicst
 	}
 }
 
-func structFromSchema(schema openapi3.Schema, fieldPrefix string) any {
+func structFromSchema(schema openapi3.Schema) any {
 	dsb := dynamicstruct.NewStruct()
 
 	for name, p := range schema.Properties {
-		exportName := fieldPrefix + name
+		// TODO replace special characters in name
+		exportName := strings.ToUpper(name[:1]) + name[1:]
 		tags, nullable := getTags(name, inList(name, schema.Required), *p.Value)
 		switch p.Value.Type {
 		case "object":
-			internalStruct := structFromSchema(*p.Value, fieldPrefix)
+			internalStruct := structFromSchema(*p.Value)
 			dsb.AddField(exportName, reflect.ValueOf(internalStruct).Elem().Interface(), tags)
 		case "string":
 			addField[string](exportName, tags, nullable, &dsb)
@@ -101,29 +100,19 @@ func structFromSchema(schema openapi3.Schema, fieldPrefix string) any {
 	return dsb.Build().New()
 }
 
-func structFromExample(example openapi3.Examples) dynamicstruct.DynamicStruct {
+func structFromExample(example openapi3.Examples) any {
 
 	for _, v := range example {
 		m := (v.Value.Value).(map[string]interface{})
-		for _, v := range m {
-			fmt.Println(v)
-			g, _ := buildExample(m, "", reflect.ValueOf(m).Kind(), "")
-			// a, _ := json.MarshalIndent(g, "", "\t")
-			fmt.Println()
-			fmt.Printf("AG: %+v\n", g)
-			f := dstruct.New(reflect.New(reflect.ValueOf(g).Type()).Interface(), "Dolus_")
-
-			// fmt.Println(reflect.New())
-			fmt.Printf("%+v\n", f.Get())
-			fmt.Println(reflect.TypeOf(g))
-		}
-
+		g, _ := buildExample(m, "", reflect.ValueOf(m).Kind(), "")
+		fmt.Println(reflect.TypeOf(g))
+		return reflect.New(reflect.ValueOf(g).Type()).Interface()
 	}
 	fmt.Println()
 	return nil
 }
 
-func buildExample(config interface{}, name string, parentType reflect.Kind, root string) (interface{}, *string) {
+func buildExample(config interface{}, name string, parentType reflect.Kind, root string) (interface{}, string) {
 	dsb := dynamicstruct.NewStruct()
 	fullFieldName := name
 	if root != "" {
@@ -131,57 +120,51 @@ func buildExample(config interface{}, name string, parentType reflect.Kind, root
 	}
 
 	if config == nil {
-		return nil, nil
+		return nil, ""
 	}
 	configKind := reflect.ValueOf(config).Kind()
-	//  TODO remember arrays of defaults are different from arrays of maps etcs..
 	switch configKind {
 
 	case reflect.Map:
 		for k, v := range config.(map[string]interface{}) {
-			eName := "Dolus_" + strings.ReplaceAll(k, "-", "_")
+			exportName := getExportName(k)
 			i, _type := buildExample(v, k, configKind, "") // 3.0 id map
-			if _type != nil {
-				switch *_type {
+			if _type != "struct" {
+				switch _type {
 				case "string":
-					dsb.AddField(eName, i.(string), fmt.Sprintf(`json:"%s" type:"%s"`, k, *_type))
+					dsb.AddField(exportName, i.(string), fmt.Sprintf(`json:"%s" type:"%s"`, k, _type))
 				case "number":
-					dsb.AddField(eName, i.(float64), fmt.Sprintf(`json:"%s" type:"%s"`, k, *_type))
+					dsb.AddField(exportName, i.(float64), fmt.Sprintf(`json:"%s" type:"%s"`, k, _type))
 				case "integer":
-					dsb.AddField(eName, int64(i.(float64)), fmt.Sprintf(`json:"%s" type:"%s"`, k, *_type))
-
+					dsb.AddField(exportName, int64(i.(float64)), fmt.Sprintf(`json:"%s" type:"%s"`, k, _type))
 				case "boolean":
-					dsb.AddField(eName, i.(bool), fmt.Sprintf(`json:"%s" type:"%s"`, k, *_type))
+					dsb.AddField(exportName, i.(bool), fmt.Sprintf(`json:"%s" type:"%s"`, k, _type))
 				case "slice":
-					dsb.AddField(eName, i, fmt.Sprintf(`json:"%s"`, k))
+					dsb.AddField(exportName, i, fmt.Sprintf(`json:"%s"`, k))
 
 				}
 			} else {
-				dsb.AddField(eName, i, fmt.Sprintf(`json:"%s"`, k))
+				dsb.AddField(exportName, i, fmt.Sprintf(`json:"%s"`, k))
 			}
 		}
 	case reflect.Slice:
-		// TODO remember to deal with slices within slices
-		// if one of the elements is a slice and the rest aren't then array is array of strings
-		// var elements []any
-		// elements should be part of the same struct
 		slice := config.([]interface{})
 		if len(slice) == 0 {
-			return nil, nil
+			return nil, ""
 		}
 		currentElement, _ := buildExample(slice[0], name, configKind, "")
+
 		// sliceElement := elementType.Type == "slice"
 		originalElement := currentElement
 		for i := 1; i < len(slice); i++ {
+
 			newElement, _ := buildExample(slice[i], name, configKind, "")
+
 			// TODO also check that currentElement is struct
 			if reflect.ValueOf(newElement).Kind() == reflect.Struct {
 				var err error
 				var mergedStruct *dstruct.DynamicStructModifier
-				if mergedStruct, err = dstruct.MergeStructs(currentElement, newElement, dstruct.StructProperties{
-					Name:   fullFieldName,
-					Prefix: "Dolus_",
-				}); err != nil {
+				if mergedStruct, err = dstruct.MergeStructs(currentElement, newElement, fullFieldName); err != nil {
 					panic(err.Error())
 				}
 				currentElement = mergedStruct.Get()
@@ -197,8 +180,7 @@ func buildExample(config interface{}, name string, parentType reflect.Kind, root
 
 		}
 		sliceOfElementType := reflect.SliceOf(reflect.ValueOf(currentElement).Type())
-		_type := "slice"
-		return reflect.MakeSlice(sliceOfElementType, 0, 1024).Interface(), &_type
+		return reflect.MakeSlice(sliceOfElementType, 0, 1024).Interface(), "slice"
 
 	default:
 		t := "unknown"
@@ -216,21 +198,26 @@ func buildExample(config interface{}, name string, parentType reflect.Kind, root
 		case reflect.Bool:
 			t = "boolean"
 		}
-		return config, &t
+		return config, t
 	}
 	t := "struct"
-	return reflect.ValueOf(dsb.Build().New()).Elem().Interface(), &t
+	return reflect.ValueOf(dsb.Build().New()).Elem().Interface(), t
 
 }
 
-func getSchema(ref *openapi3.ResponseRef, mediaType string, fieldPrefix string) any {
+func getSchema(ref *openapi3.ResponseRef, mediaType string) any {
 	content := ref.Value.Content.Get(mediaType)
 	if content != nil { // TODO if no example response maybe be empty eg /v1/cancel/charge 200 response
 		if content.Schema != nil {
-			return structFromSchema(*content.Schema.Value, fieldPrefix)
+			return structFromSchema(*content.Schema.Value)
 		} else {
 			return structFromExample(content.Examples)
 		}
 	}
-	return nil
+	return structFromExample(content.Examples)
+}
+
+func getExportName(name string) string {
+	name = strings.ReplaceAll(name, "-", "_")
+	return strings.ToUpper(name[:1]) + name[1:]
 }

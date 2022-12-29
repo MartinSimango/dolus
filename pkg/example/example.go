@@ -1,6 +1,7 @@
 package example
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/MartinSimango/dolus/pkg/dstruct"
@@ -11,41 +12,42 @@ import (
 type ValueGenerationType uint8
 
 const (
-	GenerateAll     ValueGenerationType = iota // will generate all field
-	GenerateAllOnce                            // will generate all the fields
+	Generate     ValueGenerationType = iota // will generate all field
+	GenerateOnce                            // will generate all the fields
 	UseDefaults
 )
 
 type GenerationFields map[string]generator.GenerationFunction
 
+type FixedFieldValues map[string]any
+
 type Example struct {
 	Value               *dstruct.DynamicStructModifier
 	valueGenerationType ValueGenerationType
 	generatedFields     GenerationFields
+	fixedValues         FixedFieldValues
 }
 
 func NewExampleWithGenerationFields(responseSchema *schema.ResponseSchema,
 	valueGenerationType ValueGenerationType,
 	generationFields GenerationFields,
 ) *Example {
-	// // TODO
+
 	schemaCopy := responseSchema.GetSchema()
 	if schemaCopy == nil {
-		return nil
+		return nil // no schema means we can't create an example
 	}
 
 	example := &Example{
 		generatedFields:     generationFields,
 		valueGenerationType: valueGenerationType,
 	}
-	var modifyFieldFunction dstruct.FieldModifier = nil
-	if valueGenerationType != UseDefaults {
-		modifyFieldFunction = example.initGenerationFunc
-	}
-	example.Value =
-		dstruct.NewDynamicStructModifierWithFieldModifier(schemaCopy, responseSchema.FieldPrefix, modifyFieldFunction)
 
-	if valueGenerationType == GenerateAllOnce {
+	example.Value =
+		dstruct.NewDynamicStructModifierWithFieldModifier(schemaCopy,
+			getFieldModifierFunction(valueGenerationType, example.initGenerationFunc))
+
+	if valueGenerationType == GenerateOnce {
 		example.generateFields()
 	}
 	return example
@@ -56,8 +58,7 @@ func New(responseSchema *schema.ResponseSchema, valueGenerationType ValueGenerat
 }
 
 func (example *Example) Get() interface{} {
-	if example.valueGenerationType == GenerateAll {
-		// go through each field and generate a value of it
+	if example.valueGenerationType == Generate {
 		example.generateFields()
 	}
 	return example.Value.Get()
@@ -66,7 +67,9 @@ func (example *Example) Get() interface{} {
 func (example *Example) generateFields() {
 	for k, genFunc := range example.generatedFields {
 		// TODO LOG ERROR
-		example.Value.SetField(k, genFunc.Generate())
+		if err := example.Value.SetField(k, genFunc.Generate()); err != nil {
+			fmt.Println(err)
+		}
 	}
 }
 
@@ -86,8 +89,20 @@ func (example *Example) initGenerationFunc(field *dstruct.Field) {
 		} else if field.Kind == reflect.Float64 {
 			example.generatedFields[field.Name] =
 				generator.GenerateFloatFunc(0, 10)
+		} else if field.Kind == reflect.Slice {
+			sliceType := reflect.TypeOf(field.Value.Interface()).Elem()
+			example.generatedFields[field.Name] = generator.GenerateSlice(sliceType, 1, 2)
+			// // TODO fixed
+			// example.generatedFields[field.Name] = generator.GenerateFixedSlice(example.fixedValues[field.Name])
 		}
-
 	}
 
+}
+
+func getFieldModifierFunction(valueGenerationType ValueGenerationType,
+	modifierFunction dstruct.FieldModifier) dstruct.FieldModifier {
+	if valueGenerationType != UseDefaults {
+		return modifierFunction
+	}
+	return nil
 }

@@ -30,7 +30,7 @@ func NewResponseRepository() *ResponseRepository {
 	}
 }
 
-type GenerateError struct {
+type GeneralError struct {
 	Path     string
 	Method   string
 	ErrorMsg string
@@ -51,7 +51,7 @@ func (repo *ResponseRepository) GetEchoResponse(path, method string, ctx echo.Co
 
 		}
 	}
-	return ctx.JSON(500, GenerateError{
+	return ctx.JSON(500, GeneralError{
 		Path:     path,
 		Method:   method,
 		ErrorMsg: "No expectation found for path and HTTP method.",

@@ -3,6 +3,8 @@ package dstruct
 import (
 	"fmt"
 	"reflect"
+
+	"github.com/MartinSimango/dolus/pkg/helper"
 )
 
 // An extension of "github.com/ompluscator/dynamic-struct" to help modify dynamic structs
@@ -22,23 +24,21 @@ type FieldModifier func(*Field)
 type DynamicStructModifier struct {
 	Fields        FieldMap // holds the meta data for the fields
 	_struct       any      // the struct that actually stores the data
-	prefix        string
 	fieldModifier FieldModifier
 }
 
-func New(dstruct any, prefix string) *DynamicStructModifier {
-	return NewDynamicStructModifierWithFieldModifier(dstruct, prefix, nil)
+func New(dstruct any) *DynamicStructModifier {
+	return NewDynamicStructModifierWithFieldModifier(dstruct, nil)
 }
 
-func NewDynamicStructModifierWithFieldModifier(dstruct any, prefix string, fieldModifier FieldModifier) *DynamicStructModifier {
+func NewDynamicStructModifierWithFieldModifier(dstruct any, fieldModifier FieldModifier) *DynamicStructModifier {
 	ds := &DynamicStructModifier{
 		_struct:       dstruct,
 		Fields:        make(FieldMap),
-		prefix:        prefix,
 		fieldModifier: fieldModifier,
 	}
 
-	ds.populateFieldMap(dstruct, "")
+	ds.populateFieldMap(ds._struct, "")
 	return ds
 }
 
@@ -48,10 +48,11 @@ func (ds *DynamicStructModifier) populateFieldMap(config any, root string) (newF
 	}
 
 	inputConfig := reflect.ValueOf(config).Elem()
+
 	for i := 0; i < inputConfig.NumField(); i++ {
 		field := inputConfig.Field(i)
-		fieldName := inputConfig.Type().Field(i).Name[len(ds.prefix):] // remove prefix from the fieldName
 		fieldTags := inputConfig.Type().Field(i).Tag
+		fieldName := fieldTags.Get("json")
 		if root != "" {
 			fieldName = fmt.Sprintf("%s.%s", root, fieldName)
 		}
@@ -64,6 +65,7 @@ func (ds *DynamicStructModifier) populateFieldMap(config any, root string) (newF
 				Tags:      fieldTags,
 				Value:     field,
 			}
+
 		default:
 			ds.Fields[fieldName] = &Field{
 				Name:  fieldName,
@@ -74,7 +76,6 @@ func (ds *DynamicStructModifier) populateFieldMap(config any, root string) (newF
 			if ds.fieldModifier != nil {
 				ds.fieldModifier(ds.Fields[fieldName])
 			}
-
 		}
 
 		newFields = append(newFields, ds.Fields[fieldName])
@@ -84,14 +85,14 @@ func (ds *DynamicStructModifier) populateFieldMap(config any, root string) (newF
 }
 
 func (ds *DynamicStructModifier) Get() any {
-	return getUnderlyingPointerValue(ds._struct)
+	return helper.GetUnderlyingPointerValue(ds._struct)
 }
 
 func (ds *DynamicStructModifier) SetField(field string, value any) error {
 
 	f := ds.Fields[field]
 	if f == nil {
-		return fmt.Errorf("No such field '%s' exists in schema", field)
+		return fmt.Errorf("no such field '%s' exists in schema", field)
 	}
 	switch f.Kind {
 	case reflect.String:
@@ -100,6 +101,8 @@ func (ds *DynamicStructModifier) SetField(field string, value any) error {
 		f.Value.SetInt(value.(int64))
 	case reflect.Float64:
 		f.Value.SetFloat(value.(float64))
+	case reflect.Slice:
+		f.Value.Set(reflect.ValueOf(value))
 	default:
 		panic(fmt.Sprintf("unsupported type '%s'", f.Kind))
 	}
@@ -110,15 +113,17 @@ func (ds *DynamicStructModifier) SetField(field string, value any) error {
 func (ds *DynamicStructModifier) GetField(field string) (any, error) {
 	f := ds.Fields[field]
 	if f == nil {
-		return nil, fmt.Errorf("No such field '%s' exists in schema", field)
+		return nil, fmt.Errorf("no such field '%s' exists in schema", field)
 	}
+
 	switch f.Kind {
 	case reflect.String:
 		return f.Value.String(), nil
 	case reflect.Int64:
 		return f.Value.Int(), nil
 	case reflect.Slice:
-		return f.Value.Slice(0, reflect.ValueOf(f.Value.Interface()).Len()).Interface(), nil
+		sliceLen := reflect.ValueOf(f.Value.Interface()).Len()
+		return f.Value.Slice(0, sliceLen).Interface(), nil
 	default:
 		panic(fmt.Sprintf("unsupported type '%s'", f.Kind))
 	}
