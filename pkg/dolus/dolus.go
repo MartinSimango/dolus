@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/MartinSimango/dolus/pkg/example"
+	"github.com/MartinSimango/dolus/pkg/generator"
 	"github.com/MartinSimango/dolus/pkg/schema"
 	"github.com/fatih/color"
 	"github.com/getkin/kin-openapi/openapi3"
@@ -86,8 +87,15 @@ func (d *Dolus) startHttpServer(address string) error {
 			for code, ref := range operation.Responses {
 
 				fmt.Println(path, code)
+				if path != "/" || code != "200" {
+					continue
+				}
 				s := schema.New(path, method, code, ref, "application/json")
-				d.ResponseRepository.Add(p, m, code, example.New(s, example.Generate))
+				e := example.New(s, generator.GenerateOnce)
+				fmt.Println("E: ", e.SetFieldConfig("versions.id", generator.FunctionValueConfig{
+					ValueGenerationType: generator.UseDefaults,
+				}))
+				d.ResponseRepository.Add(p, m, code, e)
 			}
 			d.EchoServer.Router().Add(m, p, func(ctx echo.Context) error {
 				return d.ResponseRepository.GetEchoResponse(p, m, ctx)

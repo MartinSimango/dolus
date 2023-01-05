@@ -9,27 +9,29 @@ import (
 	"github.com/MartinSimango/dolus/pkg/schema"
 )
 
-type ValueGenerationType uint8
+type ExampleConfig struct {
+	function            generator.GenerationFunction
+	FunctionValueConfig generator.FunctionValueConfig
+}
 
-const (
-	Generate     ValueGenerationType = iota // will generate all field
-	GenerateOnce                            // will generate all the fields
-	UseDefaults
-)
-
-type GenerationFields map[string]generator.GenerationFunction
-
-type FixedFieldValues map[string]any
+type GenerationFields map[string]*ExampleConfig
 
 type Example struct {
-	Value               *dstruct.DynamicStructModifier
-	valueGenerationType ValueGenerationType
-	generatedFields     GenerationFields
-	fixedValues         FixedFieldValues
+	Value                      *dstruct.DynamicStructModifier
+	valueGenerationType        generator.ValueGenerationType
+	generatedFields            GenerationFields
+	defaultGenerationFunctions generator.GenerationDefaults
+}
+
+func (example *Example) initExampleDefaults() {
+	example.defaultGenerationFunctions = make(generator.GenerationDefaults)
+	example.defaultGenerationFunctions[reflect.String] = generator.GenerateStringFromRegexFunc("^[a-z ,.'-]+$") // generator.GenerateFixedStringFunc("testing")
+	// example.exampleDefaults[reflect.Bool] = generator.ge
+
 }
 
 func NewExampleWithGenerationFields(responseSchema *schema.ResponseSchema,
-	valueGenerationType ValueGenerationType,
+	valueGenerationType generator.ValueGenerationType,
 	generationFields GenerationFields,
 ) *Example {
 
@@ -43,66 +45,74 @@ func NewExampleWithGenerationFields(responseSchema *schema.ResponseSchema,
 		valueGenerationType: valueGenerationType,
 	}
 
-	example.Value =
-		dstruct.NewDynamicStructModifierWithFieldModifier(schemaCopy,
-			getFieldModifierFunction(valueGenerationType, example.initGenerationFunc))
+	example.initExampleDefaults()
 
-	if valueGenerationType == GenerateOnce {
-		example.generateFields()
-	}
+	example.Value =
+		dstruct.NewDynamicStructModifierWithFieldModifier(schemaCopy, example.initGenerationFunc)
+
 	return example
 }
 
-func New(responseSchema *schema.ResponseSchema, valueGenerationType ValueGenerationType) *Example {
+func New(responseSchema *schema.ResponseSchema, valueGenerationType generator.ValueGenerationType) *Example {
 	return NewExampleWithGenerationFields(responseSchema, valueGenerationType, make(GenerationFields))
 }
 
 func (example *Example) Get() interface{} {
-	if example.valueGenerationType == Generate {
-		example.generateFields()
-	}
+	example.generateFields()
 	return example.Value.Get()
 }
 
 func (example *Example) generateFields() {
 	for k, genFunc := range example.generatedFields {
-		// TODO LOG ERROR
-		if err := example.Value.SetField(k, genFunc.Generate()); err != nil {
-			fmt.Println(err)
+		switch genFunc.FunctionValueConfig.ValueGenerationType {
+		case generator.GenerateOnce:
+			if genFunc.FunctionValueConfig.ValueGeneratedCount > 0 {
+				// NO need to regenerate value
+				continue
+			}
+
 		}
+
+		if err := example.Value.SetField(k, genFunc.function.Generate()); err != nil {
+			fmt.Println(err)
+		} else {
+			genFunc.FunctionValueConfig.ValueGeneratedCount++
+		}
+
 	}
+}
+
+func (example *Example) SetFieldConfig(fieldName string, functionValueConfig generator.FunctionValueConfig) error {
+	if !example.Value.DoesFieldExist(fieldName) {
+		return fmt.Errorf("no such field '%s' exists in schema", fieldName)
+	}
+	if example.generatedFields[fieldName] == nil {
+		example.generatedFields[fieldName] = &ExampleConfig{}
+	}
+	example.generatedFields[fieldName].FunctionValueConfig = functionValueConfig
+	return nil
 }
 
 func (example *Example) initGenerationFunc(field *dstruct.Field) {
-	if example.generatedFields[field.Name] != nil { //field already has generated function
+	if example.generatedFields[field.Name] != nil && example.generatedFields[field.Name].function != nil || field.Kind == reflect.Ptr { //field already has generated function
 		return
 	}
-	if field.Kind != reflect.Ptr {
-		pattern := field.Tags.Get("pattern")
-		if pattern != "" {
-			example.generatedFields[field.Name] =
-				generator.GenerateStringFromRegexFunc(pattern)
-		} else if field.Kind == reflect.String {
-			example.generatedFields[field.Name] =
-				generator.GenerateFixedStringFunc("string")
-
-		} else if field.Kind == reflect.Float64 {
-			example.generatedFields[field.Name] =
-				generator.GenerateFloatFunc(0, 10)
-		} else if field.Kind == reflect.Slice {
-			sliceType := reflect.TypeOf(field.Value.Interface()).Elem()
-			example.generatedFields[field.Name] = generator.GenerateSlice(sliceType, 1, 2)
-			// // TODO fixed
-			// example.generatedFields[field.Name] = generator.GenerateFixedSlice(example.fixedValues[field.Name])
+	if example.generatedFields[field.Name] == nil {
+		example.generatedFields[field.Name] = &ExampleConfig{
+			FunctionValueConfig: generator.FunctionValueConfig{
+				ValueGenerationType: example.valueGenerationType,
+			},
 		}
 	}
-
+	example.generatedFields[field.Name].function = example.getGenerationFunction(field, example.generatedFields[field.Name].FunctionValueConfig)
 }
 
-func getFieldModifierFunction(valueGenerationType ValueGenerationType,
-	modifierFunction dstruct.FieldModifier) dstruct.FieldModifier {
-	if valueGenerationType != UseDefaults {
-		return modifierFunction
+func (example *Example) getGenerationFunction(field *dstruct.Field,
+	functionValueConfig generator.FunctionValueConfig) generator.GenerationFunction {
+
+	if generationFunction := generator.GetGenerationFunction(field, functionValueConfig); generationFunction != nil {
+		return generationFunction
 	}
-	return nil
+
+	return example.defaultGenerationFunctions[field.Kind]
 }

@@ -13,6 +13,7 @@ func MergeStructs(left, right interface{}, structName string) (*DynamicStructMod
 	if reflect.ValueOf(left).Kind() != reflect.Struct || reflect.ValueOf(right).Kind() != reflect.Struct {
 		return nil, fmt.Errorf("failed to merged structs: Both interface types are not structs")
 	}
+
 	mergedStruct, err := updateCurrentElementSchema(left, right, reflect.Struct, structName)
 	if err != nil {
 		return nil, err
@@ -20,6 +21,7 @@ func MergeStructs(left, right interface{}, structName string) (*DynamicStructMod
 	return New(helper.GetPointerToInterface(mergedStruct)), nil
 }
 
+// TODO clean this function up
 func updateCurrentElementSchema(currentElement interface{}, newElement interface{}, parentKind reflect.Kind, root string) (any, error) {
 	currentElementDStruct := New(helper.GetPointerToInterface(currentElement))
 	currentElementDynamicStruct := currentElementDStruct._struct
@@ -30,13 +32,13 @@ func updateCurrentElementSchema(currentElement interface{}, newElement interface
 	newStruct := dynamicstruct.ExtendStruct(currentElementDynamicStruct)
 
 	for k, v := range newElementDynamicStructFields {
-		elementName := newElementDynamicStructFields[k].Tags.Get("json") //TODO replace special characters with _
+		elementName := newElementDynamicStructFields[k].Tags.Get("json")
 		cV := currentElementDynamicStructFields[k]
 		fullFieldName := k
 		if root != "" {
 			fullFieldName = fmt.Sprintf("%s.%s", root, k)
 		}
-		if currentElementDynamicStructFields[k] == nil {
+		if cV == nil {
 			newStruct.AddField(helper.GetExportName(elementName), v.Value.Interface(), string(v.Tags))
 			continue
 		}
@@ -62,7 +64,6 @@ func updateCurrentElementSchema(currentElement interface{}, newElement interface
 				newStruct.AddField(helper.GetExportName(elementName), newSliceTypeStruct, "")
 			} else {
 				newStruct.AddField(helper.GetExportName(elementName), v.Value.Interface(), "")
-
 			}
 
 		} else if v.Kind == reflect.Struct {
@@ -72,7 +73,6 @@ func updateCurrentElementSchema(currentElement interface{}, newElement interface
 			}
 			newStruct.RemoveField(helper.GetExportName(elementName))
 			newStruct.AddField(helper.GetExportName(elementName), updatedSchema, string(newElementDynamicStructFields[k].Tags))
-
 		}
 
 	}

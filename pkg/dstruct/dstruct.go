@@ -23,7 +23,8 @@ type FieldModifier func(*Field)
 
 type DynamicStructModifier struct {
 	Fields        FieldMap // holds the meta data for the fields
-	_struct       any      // the struct that actually stores the data
+	allFields     FieldMap
+	_struct       any // the struct that actually stores the data
 	fieldModifier FieldModifier
 }
 
@@ -35,14 +36,16 @@ func NewDynamicStructModifierWithFieldModifier(dstruct any, fieldModifier FieldM
 	ds := &DynamicStructModifier{
 		_struct:       dstruct,
 		Fields:        make(FieldMap),
+		allFields:     make(FieldMap),
 		fieldModifier: fieldModifier,
 	}
+	ds.populateFieldMap(ds._struct, "", ds.allFields)
 
-	ds.populateFieldMap(ds._struct, "")
 	return ds
 }
 
-func (ds *DynamicStructModifier) populateFieldMap(config any, root string) (newFields []*Field) {
+// TODO clean this up
+func (ds *DynamicStructModifier) populateFieldMap(config any, root string, allFields FieldMap) (newFields []*Field) {
 	if config == nil {
 		return
 	}
@@ -58,10 +61,15 @@ func (ds *DynamicStructModifier) populateFieldMap(config any, root string) (newF
 		}
 		switch field.Kind() {
 		case reflect.Struct:
+			subStruct := &DynamicStructModifier{
+				_struct:       field.Addr().Interface(),
+				Fields:        make(FieldMap),
+				fieldModifier: ds.fieldModifier,
+			}
 			ds.Fields[fieldName] = &Field{
 				Name:      fieldName,
 				Kind:      inputConfig.Field(i).Kind(),
-				SubFields: ds.populateFieldMap(field.Addr().Interface(), fieldName),
+				SubFields: subStruct.populateFieldMap(subStruct._struct, fieldName, allFields),
 				Tags:      fieldTags,
 				Value:     field,
 			}
@@ -78,7 +86,9 @@ func (ds *DynamicStructModifier) populateFieldMap(config any, root string) (newF
 			}
 		}
 
+		allFields[fieldName] = ds.Fields[fieldName]
 		newFields = append(newFields, ds.Fields[fieldName])
+
 	}
 	return
 
@@ -89,8 +99,7 @@ func (ds *DynamicStructModifier) Get() any {
 }
 
 func (ds *DynamicStructModifier) SetField(field string, value any) error {
-
-	f := ds.Fields[field]
+	f := ds.allFields[field]
 	if f == nil {
 		return fmt.Errorf("no such field '%s' exists in schema", field)
 	}
@@ -111,7 +120,7 @@ func (ds *DynamicStructModifier) SetField(field string, value any) error {
 }
 
 func (ds *DynamicStructModifier) GetField(field string) (any, error) {
-	f := ds.Fields[field]
+	f := ds.allFields[field]
 	if f == nil {
 		return nil, fmt.Errorf("no such field '%s' exists in schema", field)
 	}
@@ -127,6 +136,10 @@ func (ds *DynamicStructModifier) GetField(field string) (any, error) {
 	default:
 		panic(fmt.Sprintf("unsupported type '%s'", f.Kind))
 	}
+}
+
+func (ds *DynamicStructModifier) DoesFieldExist(field string) bool {
+	return ds.allFields[field] != nil
 }
 
 // func setField[T any](f *Field, field string, value T) {
