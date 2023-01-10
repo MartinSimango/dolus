@@ -1,6 +1,8 @@
 package generator
 
-import "reflect"
+import (
+	"reflect"
+)
 
 type GenerationFunction interface {
 	Generate() any
@@ -25,10 +27,53 @@ const (
 	UseDefaults
 )
 
-type FunctionValueConfig struct {
-	ValueGenerationType ValueGenerationType
-	ValueGeneratedCount int          // TODO should not be public
-	ValueType           reflect.Kind // TODO should not be public
+type GenerationDefaults map[reflect.Kind]GenerationFunction
+
+type GenerationConfig struct {
+	DefaultGenerationFunctions GenerationDefaults
+	ValueGenerationType        ValueGenerationType
+	SetNonRequiredFields       bool
+	SliceMinLength             int
+	SliceMaxLength             int
+	FloatMin                   float64
+	FloatMax                   float64
+	IntMin                     int64
+	IntMax                     int64
 }
 
-type GenerationDefaults map[reflect.Kind]GenerationFunction
+func NewGenerationConfig() (generationConfig *GenerationConfig) {
+	generationConfig = &GenerationConfig{
+		ValueGenerationType:  Generate,
+		SetNonRequiredFields: false,
+		SliceMinLength:       0,
+		SliceMaxLength:       10,
+	}
+	generationConfig.initGenerationFunctionDefaults()
+	return
+}
+
+func (gc *GenerationConfig) initGenerationFunctionDefaults() {
+	gc.DefaultGenerationFunctions = make(GenerationDefaults)
+	gc.DefaultGenerationFunctions[reflect.String] = GenerateFixedStringFunc("string") //generator.GenerateStringFromRegexFunc("^[a-z ,.'-]+$")
+	gc.DefaultGenerationFunctions[reflect.Ptr] = GenerateNilValue()
+	gc.DefaultGenerationFunctions[reflect.Int64] = GenerateIntegerFunc(gc.IntMin, gc.IntMax)
+	gc.DefaultGenerationFunctions[reflect.Float64] = GenerateFloatFunc(gc.FloatMin, gc.FloatMin)
+	gc.DefaultGenerationFunctions[reflect.Bool] = GenerateBoolFunc()
+
+}
+
+type GenerationUnit struct {
+	CurrentFunction  GenerationFunction
+	GenerationConfig GenerationConfig
+	count            int
+	latestValue      any
+}
+
+func (g *GenerationUnit) Generate() any {
+	if g.GenerationConfig.ValueGenerationType == GenerateOnce && g.count > 0 {
+		return g.latestValue
+	}
+	g.latestValue = g.CurrentFunction.Generate()
+	g.count++
+	return g.latestValue
+}

@@ -25,8 +25,8 @@ func MergeStructs(left, right interface{}, structName string) (*DynamicStructMod
 func updateCurrentElementSchema(currentElement interface{}, newElement interface{}, parentKind reflect.Kind, root string) (any, error) {
 	currentElementDStruct := New(helper.GetPointerToInterface(currentElement))
 	currentElementDynamicStruct := currentElementDStruct._struct
-	currentElementDynamicStructFields := currentElementDStruct.Fields
-	newElementDynamicStructFields := New(helper.GetPointerToInterface(newElement)).Fields
+	currentElementDynamicStructFields := currentElementDStruct.fields
+	newElementDynamicStructFields := New(helper.GetPointerToInterface(newElement)).fields
 
 	// struct to be returned
 	newStruct := dynamicstruct.ExtendStruct(currentElementDynamicStruct)

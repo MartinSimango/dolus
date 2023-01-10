@@ -36,6 +36,12 @@ var (
 		},
 	}
 
+	generateBool GenerationFunc = GenerationFunc{
+		_func: func(parameters ...any) any {
+			return GenerateIntegerFunc(0, 1).Generate().(int64) == 0
+		},
+	}
+
 	generateFixedString GenerationFunc = GenerationFunc{
 		_func: func(parameters ...any) any {
 			return parameters[0].(string)
@@ -48,11 +54,30 @@ var (
 		},
 	}
 
+	generateNilValue GenerationFunc = GenerationFunc{
+		_func: func(parameters ...any) any {
+			return nil
+		},
+	}
+
+	generateStruct GenerationFunc = GenerationFunc{
+
+		_func: func(parameters ...any) any {
+			generationConfig := parameters[0].(GenerationConfig)
+			val := parameters[1].(reflect.Value)
+			setStructValues(val, generationConfig)
+			return val
+		},
+	}
+
 	generateSlice GenerationFunc = GenerationFunc{
 		_func: func(parameters ...any) any {
-			sliceType := parameters[0].(reflect.Type)
-			min := parameters[1].(int)
-			max := parameters[2].(int)
+			generationConfig := parameters[0].(GenerationConfig)
+
+			val := parameters[1].(reflect.Value)
+			sliceType := reflect.TypeOf(val.Interface()).Elem()
+			min := generationConfig.SliceMinLength
+			max := generationConfig.SliceMaxLength
 
 			len := min + (int(rand.Float64() * float64(max+1-min)))
 			sliceOfElementType := reflect.SliceOf(sliceType)
@@ -61,7 +86,7 @@ var (
 			case reflect.Struct:
 				sliceElement := reflect.New(sliceType)
 				for i := 0; i < len; i++ {
-					generateStructValues(reflect.ValueOf(sliceElement.Interface()).Elem())
+					setStructValues(reflect.ValueOf(sliceElement.Interface()).Elem(), generationConfig)
 					slice = reflect.Append(slice, sliceElement.Elem())
 
 				}
@@ -71,98 +96,90 @@ var (
 		},
 	}
 
-	generateStruct GenerationFunc = GenerationFunc{
+	generatePointerValue GenerationFunc = GenerationFunc{
 
 		_func: func(parameters ...any) any {
-			val := parameters[0].(reflect.Value)
-			generateStructValues(val)
-			return val
+			generationConfig := parameters[0].(GenerationConfig)
+			val := parameters[1].(reflect.Value)
+			ptr := reflect.New(val.Type().Elem())
+			setValue(ptr.Elem(), generationConfig)
+			return ptr.Interface()
+
 		},
 	}
 )
 
-func generateValue(val reflect.Value) {
-	switch val.Kind() {
-	case reflect.String:
-		val.SetString(GenerateStringFromRegexFunc("^[a-z ,.'-]+$").Generate().(string))
-	case reflect.Struct:
-		generateStructValues(val)
-	case reflect.Bool:
-		generateBoolValue(val)
-	}
-}
-
-func generateStructValues(config reflect.Value) {
-
-	for j := 0; j < config.NumField(); j++ {
-		generateValue(config.Field(j))
-	}
-
-}
-
-func generateBoolValue(val reflect.Value) {
-	val.SetBool(true)
-}
-
-func GenerateStringFromRegexFunc(regex string) *GenerationFunc {
+func GenerateStringFromRegexFunc(regex string) GenerationFunction {
 	f := generateStringFromRegex
 	f.args = []any{regex}
-	return &f
+	return f
 }
 
-func GenerateIntegerFunc(min, max int64) *GenerationFunc {
+func GenerateIntegerFunc(min, max int64) GenerationFunction {
 	f := generateInteger
 	f.args = []any{min, max}
-	return &f
+	return f
 }
 
-func GenerateFloatFunc(min, max float64) *GenerationFunc {
+func GenerateFloatFunc(min, max float64) GenerationFunction {
 	f := generateFloat
 	f.args = []any{min, max}
-	return &f
+	return f
 }
 
-func GenerateFixedStringFunc(regex string) *GenerationFunc {
+func GenerateBoolFunc() GenerationFunction {
+	f := generateBool
+	return f
+}
+
+func GenerateFixedStringFunc(regex string) GenerationFunction {
 	f := generateFixedString
 	f.args = []any{regex}
-	return &f
+	return f
 }
 
-func GenerateSlice(_typ reflect.Type, min, max int) *GenerationFunc {
+func GenerateNilValue() GenerationFunction {
+	f := generateNilValue
+	return f
+}
+
+func GenerateSlice(generationConfig GenerationConfig, val reflect.Value) GenerationFunction {
 	f := generateSlice
-	f.args = []any{_typ, min, max}
-	return &f
+	f.args = []any{generationConfig, val}
+	return f
 }
 
-func GenerateStruct(val reflect.Value) *GenerationFunc {
+func GenerateStruct(generationConfig GenerationConfig, val reflect.Value) GenerationFunction {
 	f := generateStruct
-	f.args = []any{val}
-	return &f
+	f.args = []any{generationConfig, val}
+	return f
+}
+
+func GeneratePointerValue(generationConfig GenerationConfig, val reflect.Value) GenerationFunction {
+	f := generatePointerValue
+	f.args = []any{generationConfig, val}
+	return f
 }
 
 func GetGenerationFunction(field *dstruct.Field,
-	functionValueConfig FunctionValueConfig) *GenerationFunc {
+	functionValueConfig GenerationConfig, // TODO add example config contains slice size
+) GenerationFunction {
+
 	pattern := field.Tags.Get("pattern")
 	if pattern != "" {
 		return GenerateStringFromRegexFunc(pattern)
 	}
+
 	switch field.Kind {
-	case reflect.Float64:
-		return GenerateFloatFunc(0, 10)
 	case reflect.Slice:
-		sliceType := reflect.TypeOf(field.Value.Interface()).Elem()
-		return GenerateSlice(sliceType, 1, 2)
+		return GenerateSlice(functionValueConfig, field.Value)
 	case reflect.Struct:
-		return GenerateStruct(field.Value)
+		return GenerateStruct(functionValueConfig, field.Value)
+	case reflect.Ptr:
+		if functionValueConfig.SetNonRequiredFields {
+			return GeneratePointerValue(functionValueConfig, field.Value)
+		}
 	}
+	return functionValueConfig.DefaultGenerationFunctions[field.Kind]
 
-	return nil
 }
-
-// func GenerateFixedSlice(value any) *GenerationFunc {
-// 	return
-// }
-
-// example.generatedFields[field.Name] = generator.GenerateSlice(sliceType, 0, 10)
-// // TODO fixed
-// example.generatedFields[field.Name] = generator.GenerateFixedSlice(example.fixedValues[field.Name])

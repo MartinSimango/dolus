@@ -22,7 +22,7 @@ type FieldMap map[string]*Field
 type FieldModifier func(*Field)
 
 type DynamicStructModifier struct {
-	Fields        FieldMap // holds the meta data for the fields
+	fields        FieldMap // holds the meta data for the fields
 	allFields     FieldMap
 	_struct       any // the struct that actually stores the data
 	fieldModifier FieldModifier
@@ -35,7 +35,7 @@ func New(dstruct any) *DynamicStructModifier {
 func NewDynamicStructModifierWithFieldModifier(dstruct any, fieldModifier FieldModifier) *DynamicStructModifier {
 	ds := &DynamicStructModifier{
 		_struct:       dstruct,
-		Fields:        make(FieldMap),
+		fields:        make(FieldMap),
 		allFields:     make(FieldMap),
 		fieldModifier: fieldModifier,
 	}
@@ -63,10 +63,10 @@ func (ds *DynamicStructModifier) populateFieldMap(config any, root string, allFi
 		case reflect.Struct:
 			subStruct := &DynamicStructModifier{
 				_struct:       field.Addr().Interface(),
-				Fields:        make(FieldMap),
+				fields:        make(FieldMap),
 				fieldModifier: ds.fieldModifier,
 			}
-			ds.Fields[fieldName] = &Field{
+			ds.fields[fieldName] = &Field{
 				Name:      fieldName,
 				Kind:      inputConfig.Field(i).Kind(),
 				SubFields: subStruct.populateFieldMap(subStruct._struct, fieldName, allFields),
@@ -75,19 +75,19 @@ func (ds *DynamicStructModifier) populateFieldMap(config any, root string, allFi
 			}
 
 		default:
-			ds.Fields[fieldName] = &Field{
+			ds.fields[fieldName] = &Field{
 				Name:  fieldName,
 				Kind:  inputConfig.Field(i).Kind(),
 				Tags:  fieldTags,
 				Value: field,
 			}
 			if ds.fieldModifier != nil {
-				ds.fieldModifier(ds.Fields[fieldName])
+				ds.fieldModifier(ds.fields[fieldName])
 			}
 		}
 
-		allFields[fieldName] = ds.Fields[fieldName]
-		newFields = append(newFields, ds.Fields[fieldName])
+		allFields[fieldName] = ds.fields[fieldName]
+		newFields = append(newFields, ds.fields[fieldName])
 
 	}
 	return
@@ -98,28 +98,20 @@ func (ds *DynamicStructModifier) Get() any {
 	return helper.GetUnderlyingPointerValue(ds._struct)
 }
 
-func (ds *DynamicStructModifier) SetField(field string, value any) error {
+func (ds *DynamicStructModifier) SetFieldValue(field string, value any) error {
 	f := ds.allFields[field]
 	if f == nil {
 		return fmt.Errorf("no such field '%s' exists in schema", field)
 	}
-	switch f.Kind {
-	case reflect.String:
-		f.Value.SetString(value.(string))
-	case reflect.Int64:
-		f.Value.SetInt(value.(int64))
-	case reflect.Float64:
-		f.Value.SetFloat(value.(float64))
-	case reflect.Slice:
+	if value == nil {
+		f.Value.Set(reflect.Zero(f.Value.Type()))
+	} else {
 		f.Value.Set(reflect.ValueOf(value))
-	default:
-		panic(fmt.Sprintf("unsupported type '%s'", f.Kind))
 	}
-
 	return nil
 }
 
-func (ds *DynamicStructModifier) GetField(field string) (any, error) {
+func (ds *DynamicStructModifier) GetFieldValue(field string) (any, error) {
 	f := ds.allFields[field]
 	if f == nil {
 		return nil, fmt.Errorf("no such field '%s' exists in schema", field)
@@ -140,6 +132,10 @@ func (ds *DynamicStructModifier) GetField(field string) (any, error) {
 
 func (ds *DynamicStructModifier) DoesFieldExist(field string) bool {
 	return ds.allFields[field] != nil
+}
+
+func (ds *DynamicStructModifier) GetField(field string) *Field {
+	return ds.allFields[field]
 }
 
 // func setField[T any](f *Field, field string, value T) {

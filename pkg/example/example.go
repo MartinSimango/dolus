@@ -2,37 +2,28 @@ package example
 
 import (
 	"fmt"
-	"reflect"
 
 	"github.com/MartinSimango/dolus/pkg/dstruct"
 	"github.com/MartinSimango/dolus/pkg/generator"
 	"github.com/MartinSimango/dolus/pkg/schema"
 )
 
-type ExampleConfig struct {
-	function            generator.GenerationFunction
-	FunctionValueConfig generator.FunctionValueConfig
+type ExampleFieldConfig struct {
+	generationUnit generator.GenerationUnit
 }
 
-type GenerationFields map[string]*ExampleConfig
+type GenerationFields map[string]*ExampleFieldConfig
 
 type Example struct {
-	Value                      *dstruct.DynamicStructModifier
-	valueGenerationType        generator.ValueGenerationType
-	generatedFields            GenerationFields
-	defaultGenerationFunctions generator.GenerationDefaults
-}
-
-func (example *Example) initExampleDefaults() {
-	example.defaultGenerationFunctions = make(generator.GenerationDefaults)
-	example.defaultGenerationFunctions[reflect.String] = generator.GenerateStringFromRegexFunc("^[a-z ,.'-]+$") // generator.GenerateFixedStringFunc("testing")
-	// example.exampleDefaults[reflect.Bool] = generator.ge
-
+	Value            *dstruct.DynamicStructModifier
+	GenerationConfig generator.GenerationConfig
+	generatedFields  GenerationFields
 }
 
 func NewExampleWithGenerationFields(responseSchema *schema.ResponseSchema,
-	valueGenerationType generator.ValueGenerationType,
-	generationFields GenerationFields,
+	generatedFields GenerationFields,
+	generationConfig generator.GenerationConfig,
+
 ) *Example {
 
 	schemaCopy := responseSchema.GetSchema()
@@ -41,11 +32,9 @@ func NewExampleWithGenerationFields(responseSchema *schema.ResponseSchema,
 	}
 
 	example := &Example{
-		generatedFields:     generationFields,
-		valueGenerationType: valueGenerationType,
+		GenerationConfig: generationConfig,
+		generatedFields:  generatedFields,
 	}
-
-	example.initExampleDefaults()
 
 	example.Value =
 		dstruct.NewDynamicStructModifierWithFieldModifier(schemaCopy, example.initGenerationFunc)
@@ -53,8 +42,8 @@ func NewExampleWithGenerationFields(responseSchema *schema.ResponseSchema,
 	return example
 }
 
-func New(responseSchema *schema.ResponseSchema, valueGenerationType generator.ValueGenerationType) *Example {
-	return NewExampleWithGenerationFields(responseSchema, valueGenerationType, make(GenerationFields))
+func New(responseSchema *schema.ResponseSchema, config generator.GenerationConfig) *Example {
+	return NewExampleWithGenerationFields(responseSchema, make(GenerationFields), config)
 }
 
 func (example *Example) Get() interface{} {
@@ -64,55 +53,42 @@ func (example *Example) Get() interface{} {
 
 func (example *Example) generateFields() {
 	for k, genFunc := range example.generatedFields {
-		switch genFunc.FunctionValueConfig.ValueGenerationType {
-		case generator.GenerateOnce:
-			if genFunc.FunctionValueConfig.ValueGeneratedCount > 0 {
-				// NO need to regenerate value
-				continue
-			}
-
-		}
-
-		if err := example.Value.SetField(k, genFunc.function.Generate()); err != nil {
+		if err := example.Value.SetFieldValue(k, genFunc.generationUnit.Generate()); err != nil {
 			fmt.Println(err)
-		} else {
-			genFunc.FunctionValueConfig.ValueGeneratedCount++
 		}
-
 	}
 }
 
-func (example *Example) SetFieldConfig(fieldName string, functionValueConfig generator.FunctionValueConfig) error {
-	if !example.Value.DoesFieldExist(fieldName) {
+func (example *Example) setFieldGenerationConfig(fieldName string, functionValueConfig generator.GenerationConfig) {
+	field := example.Value.GetField(fieldName)
+
+	example.generatedFields[fieldName].generationUnit.GenerationConfig = functionValueConfig
+	example.generatedFields[fieldName].generationUnit.CurrentFunction = generator.GetGenerationFunction(field, functionValueConfig)
+}
+
+func (example *Example) GetFieldGenerationConfig(fieldName string) (*generator.GenerationConfig, error) {
+	if example.generatedFields[fieldName] == nil {
+		return nil, fmt.Errorf("no such field '%s' exists in schema", fieldName)
+	}
+	return &example.generatedFields[fieldName].generationUnit.GenerationConfig, nil
+}
+
+func (example *Example) Update(fieldName string) error {
+	field := example.Value.GetField(fieldName)
+	if field == nil {
 		return fmt.Errorf("no such field '%s' exists in schema", fieldName)
 	}
-	if example.generatedFields[fieldName] == nil {
-		example.generatedFields[fieldName] = &ExampleConfig{}
-	}
-	example.generatedFields[fieldName].FunctionValueConfig = functionValueConfig
+	example.setFieldGenerationConfig(fieldName, example.generatedFields[fieldName].generationUnit.GenerationConfig)
 	return nil
 }
 
 func (example *Example) initGenerationFunc(field *dstruct.Field) {
-	if example.generatedFields[field.Name] != nil && example.generatedFields[field.Name].function != nil || field.Kind == reflect.Ptr { //field already has generated function
-		return
-	}
-	if example.generatedFields[field.Name] == nil {
-		example.generatedFields[field.Name] = &ExampleConfig{
-			FunctionValueConfig: generator.FunctionValueConfig{
-				ValueGenerationType: example.valueGenerationType,
-			},
-		}
-	}
-	example.generatedFields[field.Name].function = example.getGenerationFunction(field, example.generatedFields[field.Name].FunctionValueConfig)
-}
-
-func (example *Example) getGenerationFunction(field *dstruct.Field,
-	functionValueConfig generator.FunctionValueConfig) generator.GenerationFunction {
-
-	if generationFunction := generator.GetGenerationFunction(field, functionValueConfig); generationFunction != nil {
-		return generationFunction
+	example.generatedFields[field.Name] = &ExampleFieldConfig{
+		generationUnit: generator.GenerationUnit{
+			CurrentFunction: generator.GetGenerationFunction(field,
+				example.GenerationConfig),
+			GenerationConfig: example.GenerationConfig,
+		},
 	}
 
-	return example.defaultGenerationFunctions[field.Kind]
 }

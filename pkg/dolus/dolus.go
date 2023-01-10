@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
+	"strings"
 
 	"github.com/MartinSimango/dolus/pkg/example"
 	"github.com/MartinSimango/dolus/pkg/generator"
@@ -66,6 +68,11 @@ func (d *Dolus) initHttpServer() {
 	d.EchoServer.HidePort = d.HidePort
 }
 
+func getRealPath(path string) string {
+	p := strings.ReplaceAll(path, "{", ":")
+	return strings.ReplaceAll(p, "}", "")
+}
+
 func (d *Dolus) startHttpServer(address string) error {
 	d.initHttpServer()
 
@@ -82,19 +89,35 @@ func (d *Dolus) startHttpServer(address string) error {
 
 	for path := range doc.Paths {
 		for method, operation := range doc.Paths[path].Operations() {
-			p := path
+			p := getRealPath(path)
 			m := method
 			for code, ref := range operation.Responses {
 
-				fmt.Println(path, code)
-				if path != "/" || code != "200" {
+				fmt.Println(p, code)
+
+				s := schema.New(path, method, code, ref, "application/json")
+				generatorConfig := generator.NewGenerationConfig()
+				generatorConfig.SetNonRequiredFields = false
+				e := example.New(s, *generatorConfig)
+				if e == nil {
 					continue
 				}
-				s := schema.New(path, method, code, ref, "application/json")
-				e := example.New(s, generator.GenerateOnce)
-				fmt.Println("E: ", e.SetFieldConfig("versions.id", generator.FunctionValueConfig{
-					ValueGenerationType: generator.UseDefaults,
-				}))
+				fc, _ := e.GetFieldGenerationConfig("versions")
+				if fc != nil {
+					fc.SetNonRequiredFields = true
+					fc.DefaultGenerationFunctions[reflect.String] = generator.GenerateFixedStringFunc("string")
+					fc.SliceMaxLength = 1
+					fc.SliceMinLength = 1
+
+					e.Update("versions")
+				}
+
+				// fmt.Println("E: ", e.SetFieldFunctionValueConfig("status", &generator.FunctionValueConfig{
+				// 	GenerationConfig: generator.GenerationConfig{
+				// 		SetNonRequiredFields: true,
+				// 		G
+				// 	},
+				// }))
 				d.ResponseRepository.Add(p, m, code, e)
 			}
 			d.EchoServer.Router().Add(m, p, func(ctx echo.Context) error {

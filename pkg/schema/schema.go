@@ -90,8 +90,15 @@ func structFromSchema(schema openapi3.Schema) any {
 			addField[string](exportName, tags, nullable, &dsb)
 		case "number":
 			addField[float64](exportName, tags, nullable, &dsb)
+		case "integer":
+			addField[int64](exportName, tags, nullable, &dsb)
+		case "array":
+			// TODO need to accomdate
+			fmt.Printf("ARRAY: %+v\n", p.Value) //#need to get array items
+		case "boolean":
+			addField[bool](exportName, tags, nullable, &dsb)
 		default:
-			panic(fmt.Sprintf("Unsupported for type '%s'", p.Value.Type))
+			panic(fmt.Sprintf("Unsupported type '%s'", p.Value.Type))
 		}
 
 	}
@@ -205,14 +212,17 @@ func buildExample(config interface{}, name string, root string) (interface{}, st
 
 func getSchema(ref *openapi3.ResponseRef, mediaType string) any {
 	content := ref.Value.Content.Get(mediaType)
-	if content != nil { // TODO if no example response maybe be empty eg /v1/cancel/charge 200 response
+	if content != nil { // TODO if no example response maybe be empty
 		if content.Schema != nil {
 			return structFromSchema(*content.Schema.Value)
 		} else {
 			return structFromExample(content.Examples)
 		}
+
 	}
-	return structFromExample(content.Examples)
+
+	fmt.Println("NO SCHEMA!")
+	return nil
 }
 
 func getExportName(name string) string {
